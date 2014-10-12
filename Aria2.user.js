@@ -20,40 +20,6 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 		}, options || {});
 
 		this.id = parseInt (options, 10) || (0 + new Date());
-
-		// 添加各类函数
-		var that = this;
-		[
-			"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
-			"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
-			"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
-			"getServers", "tellActive", "tellWaiting", "tellStopped",
-			"changePosition", "changeUri", "getOption", "changeOption",
-			"getGlobalOption", "changeGlobalOption", "getGlobalStat",
-			"purgeDownloadResult", "removeDownloadResult", "getVersion",
-			"getSessionInfo", "shutdown", "forceShutdown", "saveSession"
-		].forEach (function (sMethod) {
-			that[sMethod] = function ( /* arg1, arg2, ... , [cbSuccess, [cbError]] */ ) {
-				var args = [].slice.call (arguments);
-
-				var cbSuccess, cbError;
-				if (args.length && _isFunction(args[args.length - 1])) {
-					cbSuccess = args[args.length - 1];
-					args.splice (-1, 1);
-
-					if (args.length && _isFunction(args[args.length - 1])) {
-						cbError = cbSuccess;
-						cbSuccess =args[args.length - 1];
-						args.splice (-1, 1);
-					}
-				}
-
-				return that.send ({
-					method: 'aria2.' + sMethod,
-					params: args
-				}, cbSuccess, cbError);
-			};
-		});
 	};
 	
 	// 静态常量
@@ -111,6 +77,42 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 			return GM_xmlhttpRequest (payload);
 		}
 	};
+
+
+	// 添加各类函数
+	var that = this;
+	[
+		"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
+		"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
+		"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
+		"getServers", "tellActive", "tellWaiting", "tellStopped",
+		"changePosition", "changeUri", "getOption", "changeOption",
+		"getGlobalOption", "changeGlobalOption", "getGlobalStat",
+		"purgeDownloadResult", "removeDownloadResult", "getVersion",
+		"getSessionInfo", "shutdown", "forceShutdown", "saveSession"
+	].forEach (function (sMethod) {
+		// arg1, arg2, ... , [cbSuccess, [cbError]]
+		AriaBase.prototype[sMethod] = function ( ) {
+			var args = [].slice.call (arguments);
+
+			var cbSuccess, cbError;
+			if (args.length && _isFunction(args[args.length - 1])) {
+				cbSuccess = args[args.length - 1];
+				args.splice (-1, 1);
+
+				if (args.length && _isFunction(args[args.length - 1])) {
+					cbError = cbSuccess;
+					cbSuccess =args[args.length - 1];
+					args.splice (-1, 1);
+				}
+			}
+
+			return this.send ({
+				method: 'aria2.' + sMethod,
+				params: args
+			}, cbSuccess, cbError);
+		};
+	});
 	
 	return AriaBase;
 })
