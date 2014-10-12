@@ -64,8 +64,12 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 				},
 				data: JSON.stringify ( _merge ({ jsonrpc: jsonrpc_ver, id: this.id }, data) ),
 				onload: function (r) {
-					if (cbSuccess)
-						cbSuccess (JSON.parse (r.responseText));
+					var repData = JSON.parse (r.responseText);
+					if (repData.error) {
+						cbError && cbError (repData);
+					} else {
+						cbSuccess && cbSuccess (repData);
+					}
 				},
 				onerror: cbError
 			};
