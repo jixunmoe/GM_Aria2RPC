@@ -25,33 +25,14 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 	// 静态常量
 	AriaBase.AUTH = {
 		noAuth: 0,
-		user:   1,
+		basic:  1,
 		secret: 2
 	};
 
 	// public 函数
 	AriaBase.prototype = {
-		getAuthString: function () {
-			var user = this.options.auth.user,
-				pass = this.options.auth.pass;
-
-			switch ( this.options.auth.type ) {
-				case AriaBase.AUTH.noAuth:
-					return '';
-
-				case AriaBase.AUTH.user:
-					break;
-				
-				case AriaBase.AUTH.secret:
-					user = 'token';
-					break;
-
-				default:
-					throw new Error('Undefined auth type: %s', this.options.auth.type);
-					break;
-			}
-
-			return btoa (_format('%s:%s', user, pass));
+		getBasicAuth: function () {
+			return btoa (_format('%s:%s', this.options.auth.user, this.options.auth.pass));
 		},
 
 		send: function ( data, cbSuccess, cbError ) {
@@ -62,7 +43,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 				headers: {
 					'Content-Type': 'application/json; charset=UTF-8'
 				},
-				data: JSON.stringify ( _merge ({ jsonrpc: jsonrpc_ver, id: this.id }, data) ),
+				data: _merge ({ jsonrpc: jsonrpc_ver, id: this.id }, data),
 				onload: function (r) {
 					var repData = JSON.parse (r.responseText);
 					if (repData.error) {
@@ -74,9 +55,27 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 				onerror: cbError
 			};
 
-			if (this.options.auth.type !== AriaBase.AUTH.noAuth) {
-				payload.headers.Authorization = 'Basic ' + this.getAuthString();
+			switch (this.options.auth.type) {
+				case AriaBase.AUTH.noAuth:
+					// DO NOTHING
+					break;
+
+				case AriaBase.AUTH.basic:
+					payload.headers.Authorization = 'Basic ' + this.getBasicAuth();
+					break;
+
+				case AriaBase.AUTH.secret:
+					if (!payload.data.params)
+						payload.data.params = [];
+
+					payload.data.params.splice(0, 0, _format('token:%s', this.options.auth.pass));
+					break;
+
+				default:
+					throw new Error('Undefined auth type: %s', this.options.auth.type);
 			}
+
+			payload.data = JSON.stringify ( payload.data );
 
 			return GM_xmlhttpRequest (payload);
 		}
@@ -105,7 +104,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 
 				if (args.length && _isFunction(args[args.length - 1])) {
 					cbError = cbSuccess;
-					cbSuccess =args[args.length - 1];
+					cbSuccess = args[args.length - 1];
 					args.splice (-1, 1);
 				}
 			}
