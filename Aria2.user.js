@@ -80,7 +80,6 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 
 
 	// 添加各类函数
-	var that = this;
 	[
 		"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
 		"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
