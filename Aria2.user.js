@@ -19,7 +19,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 			port: 6800
 		}, options || {});
 
-		this.id = parseInt (options, 10) || (0 + new Date());
+		this.id = parseInt (options, 10) || (+ new Date());
 	};
 	
 	// 静态常量
@@ -35,7 +35,9 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 			return btoa (_format('%s:%s', this.options.auth.user, this.options.auth.pass));
 		},
 
-		send: function ( data, cbSuccess, cbError ) {
+		send: function ( bIsDataBatch, data, cbSuccess, cbError ) {
+			var srcTaskObj = { jsonrpc: jsonrpc_ver, id: this.id };
+
 			var payload = {
 
 				method: 'POST',
@@ -43,16 +45,18 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 				headers: {
 					'Content-Type': 'application/json; charset=UTF-8'
 				},
-				data: _merge ({ jsonrpc: jsonrpc_ver, id: this.id }, data),
+				data: bIsDataBatch
+					? data.map (function (e) { return _merge ({}, srcTaskObj, e); })
+					: _merge ({}, srcTaskObj, data),
 				onload: function (r) {
 					var repData = JSON.parse (r.responseText);
 					if (repData.error) {
-						cbError && cbError (repData);
+						cbError && cbError (false, repData);
 					} else {
 						cbSuccess && cbSuccess (repData);
 					}
 				},
-				onerror: cbError
+				onerror: cbError ? cbError.bind(null, false) : null
 			};
 
 			switch (this.options.auth.type) {
@@ -78,6 +82,19 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 			payload.data = JSON.stringify ( payload.data );
 
 			return GM_xmlhttpRequest (payload);
+		},
+
+		// batchAddUri ( foo, { uri: 'http://example.com/xxx', options: { ... } } )
+		batchAddUri: function (fCallback) {
+			// { url, name }
+			var payload = [].slice.call (arguments, 1).map (function (arg) {
+				return {
+					method: 'aria2.addUri',
+					params: [ arg.uri.map ? arg.uri : [ arg.uri ] ].concat (arg.options || [])
+				};
+			});
+			
+			return this.send (true, payload, fCallback, fCallback);
 		}
 	};
 
@@ -109,7 +126,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 				}
 			}
 
-			return this.send ({
+			return this.send (false, {
 				method: 'aria2.' + sMethod,
 				params: args
 			}, cbSuccess, cbError);
