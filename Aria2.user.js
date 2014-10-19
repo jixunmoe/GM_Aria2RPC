@@ -46,7 +46,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 					'Content-Type': 'application/json; charset=UTF-8'
 				},
 				data: bIsDataBatch
-					? data.map (function (e) { return _merge ({}, srcTaskObj, e); })
+					? { params: data.map (function (e) { return _merge ({}, srcTaskObj, e); }) }
 					: _merge ({}, srcTaskObj, data),
 				onload: function (r) {
 					var repData = JSON.parse (r.responseText);
