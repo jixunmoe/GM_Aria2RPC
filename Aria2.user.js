@@ -1,5 +1,5 @@
 // Public Class Aria2 ( options )
-var Aria2 = (function (_merge, _format, _isFunction) {
+var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 	var jsonrpc_ver = '2.0';
 
 	// I'm lazy
@@ -46,7 +46,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 					'Content-Type': 'application/json; charset=UTF-8'
 				},
 				data: bIsDataBatch
-					? { params: data.map (function (e) { return _merge ({}, srcTaskObj, e); }) }
+					? data.map (function (e) { return _merge ({}, srcTaskObj, e); })
 					: _merge ({}, srcTaskObj, data),
 				onload: function (r) {
 					var repData = JSON.parse (r.responseText);
@@ -69,10 +69,17 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 					break;
 
 				case AriaBase.AUTH.secret:
-					if (!payload.data.params)
-						payload.data.params = [];
-
-					payload.data.params.splice(0, 0, _format('token:%s', this.options.auth.pass));
+					(function (sToken) {
+						if (bIsDataBatch) {
+							for (var i = 0; i < payload.data.length; i++) {
+								payload.data[i].params.splice(0, 0, sToken);
+							}
+						} else {
+							if (!payload.data.params)
+								payload.data.params = [];
+							payload.data.params.splice(0, 0, sToken);
+						}
+					})(_format('token:%s', this.options.auth.pass));
 					break;
 
 				default:
@@ -100,16 +107,7 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 
 
 	// 添加各类函数
-	[
-		"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
-		"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
-		"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
-		"getServers", "tellActive", "tellWaiting", "tellStopped",
-		"changePosition", "changeUri", "getOption", "changeOption",
-		"getGlobalOption", "changeGlobalOption", "getGlobalStat",
-		"purgeDownloadResult", "removeDownloadResult", "getVersion",
-		"getSessionInfo", "shutdown", "forceShutdown", "saveSession"
-	].forEach (function (sMethod) {
+	_arrFn.forEach (function (sMethod) {
 		// arg1, arg2, ... , [cbSuccess, [cbError]]
 		AriaBase.prototype[sMethod] = function ( ) {
 			var args = [].slice.call (arguments);
@@ -135,8 +133,19 @@ var Aria2 = (function (_merge, _format, _isFunction) {
 	
 	return AriaBase;
 })
+// const 变量
+([
+	"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
+	"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
+	"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
+	"getServers", "tellActive", "tellWaiting", "tellStopped",
+	"changePosition", "changeUri", "getOption", "changeOption",
+	"getGlobalOption", "changeGlobalOption", "getGlobalStat",
+	"purgeDownloadResult", "removeDownloadResult", "getVersion",
+	"getSessionInfo", "shutdown", "forceShutdown", "saveSession"
+], 
 // private 函数
-((function (base) {
+(function (base) {
 	var _isObject = function (obj) {
 		return obj instanceof Object;
 	};
