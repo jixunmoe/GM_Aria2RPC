@@ -1,16 +1,17 @@
 // Public Class Aria2 ( options )
 
-var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
+var Aria2 = (function (_isGM, _arrFn, _merge, _format, _isFunction) {
 	var jsonrpc_ver = '2.0';
 
-	if ('undefined' == typeof GM_xmlhttpRequest) {
-		console.warn ([
-			'Warning: You are now using a simple implementation of GM_xmlhttpRequest',
-			'Cross-domain request are not avilible unless configured correctly @ target server.',
-			'',
-			'Some of its features are not avilible, such as `username` and `password` field.'
-		].join('\n'));
-		var GM_xmlhttpRequest = function ( opts ) {
+	if (_isGM) {
+		var doRequest = function ( opts ) {
+			console.warn ([
+				'Warning: You are now using an simple implementation of GM_xmlhttpRequest',
+				'Cross-domain request are not avilible unless configured correctly @ target server.',
+				'',
+				'Some of its features are not avilible, such as `username` and `password` field.'
+			].join('\n'));
+
 			var oReq = new XMLHttpRequest ();
 			var cbCommon = function (cb) {
 				return (function () {
@@ -37,6 +38,8 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 			}
 			return oReq.send(opts.data || null);
 		};
+	} else {
+		var doRequest = GM_xmlhttpRequest;
 	}
 
 	var AriaBase = function ( options ) {
@@ -119,7 +122,7 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 
 			payload.data = JSON.stringify ( payload.data );
 
-			return GM_xmlhttpRequest (payload);
+			return doRequest (payload);
 		},
 
 		// batchAddUri ( foo, { uri: 'http://example.com/xxx', options: { ... } } )
@@ -225,7 +228,7 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 	return AriaBase;
 })
 // const 变量
-([
+('undefined' != typeof GM_xmlhttpRequest, [
 	"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
 	"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
 	"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
