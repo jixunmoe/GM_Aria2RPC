@@ -1,11 +1,42 @@
 // Public Class Aria2 ( options )
+
 var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 	var jsonrpc_ver = '2.0';
 
-	// I'm lazy
-	if (typeof GM_xmlhttpRequest == 'undefined') {
-		console.error ('GM_xmlhttpRequest is required for `Aria2.jsonrpc` to work.');
-		return null;
+	if ('undefined' == typeof GM_xmlhttpRequest) {
+		console.warn ([
+			'Warning: You are now using a simple implementation of GM_xmlhttpRequest',
+			'Cross-domain request are not avilible unless configured correctly @ target server.',
+			'',
+			'Some of its features are not avilible, such as `username` and `password` field.'
+		].join('\n'));
+		var GM_xmlhttpRequest = function ( opts ) {
+			var oReq = new XMLHttpRequest ();
+			var cbCommon = function (cb) {
+				return (function () {
+					cb ({
+						readyState: oReq.readyState,
+						responseHeaders: opts.getHeader ? oReq.getAllResponseHeaders() : null,
+						getHeader: oReq.getResponseHeader.bind (oReq),
+						responseText: oReq.responseText,
+						status: oReq.status,
+						statusText: oReq.statusText
+					});
+				}).bind (opts);
+			};
+
+			if (opts.onload)  oReq.onload   = cbCommon (opts.onload);
+			if (opts.onerror) oReq.onerror  = cbCommon (opts.onerror);
+
+			oReq.open(opts.method || 'GET', opts.url, !opts.synchronous);
+
+			if (opts.headers) {
+				Object.keys(opts.headers).forEach (function (key) {
+					oReq.setRequestHeader (key, opts.headers[key]);
+				});
+			}
+			return oReq.send(opts.data || null);
+		};
 	}
 
 	var AriaBase = function ( options ) {
@@ -59,7 +90,7 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 				onerror: cbError ? cbError.bind(null, false) : null
 			};
 
-			switch (this.options.auth.type) {
+			switch ( parseInt (this.options.auth.type, 10) ) {
 				case AriaBase.AUTH.noAuth:
 					// DO NOTHING
 					break;
@@ -83,7 +114,7 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 					break;
 
 				default:
-					throw new Error('Undefined auth type: %s', this.options.auth.type);
+					throw new Error('Undefined auth type: ' + this.options.auth.type);
 			}
 
 			payload.data = JSON.stringify ( payload.data );
@@ -93,6 +124,11 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 
 		// batchAddUri ( foo, { uri: 'http://example.com/xxx', options: { ... } } )
 		batchAddUri: function (fCallback) {
+			console.warn (
+				'This function [%s] has deprecated! Consider use %s instead.',
+				'batchAddUri', 'AriaBase.BATCH'
+			);
+
 			// { url, name }
 			var payload = [].slice.call (arguments, 1).map (function (arg) {
 				return {
@@ -107,7 +143,11 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 
 
 	// 添加各类函数
+	AriaBase.fn = {};
 	_arrFn.forEach (function (sMethod) {
+		// 函数链表
+		AriaBase.fn[sMethod] = sMethod;
+
 		// arg1, arg2, ... , [cbSuccess, [cbError]]
 		AriaBase.prototype[sMethod] = function ( ) {
 			var args = [].slice.call (arguments);
@@ -130,6 +170,57 @@ var Aria2 = (function (_arrFn, _merge, _format, _isFunction) {
 			}, cbSuccess, cbError);
 		};
 	});
+
+	AriaBase.BATCH = function ( parent, cbSuccess, cbFail ) {
+		if (!(parent instanceof AriaBase))
+			throw new Error ('Parent is not AriaBase!');
+
+		this.parent = parent;
+		this.data = [];
+
+		this.onSuccess = cbSuccess;
+		this.onFail = cbFail;
+	};
+
+	AriaBase.BATCH.prototype = {
+		addRaw: function (fn, args) {
+			this.data.push ({
+				method: 'aria2.' + fn,
+				params: args
+			});
+			return this;
+		},
+
+		add: function (fn) {
+			// People can add more without edit source.
+			if (!AriaBase.fn[fn])
+				throw new Error ('Unknown function: ' + fn + ', please check if you had a typo.');
+
+			return this.addRaw (fn, [].slice.call(arguments, 1));
+		},
+
+		send: function () {
+			// bIsDataBatch, data, cbSuccess, cbError
+			var ret = this.parent.send ( true, this.data, this.onSuccess, this.onFail );
+			this.reset ();
+			return ret;
+		},
+
+		getActions: function () {
+			return this.data.slice();
+		},
+
+		setActions: function (actions) {
+			if (!actions || !actions.map) return ;
+
+			this.data = actions;
+		},
+
+		reset: function () {
+			this.onSuccess = this.onFail = null;
+			this.setActions ( [] );
+		}
+	};
 	
 	return AriaBase;
 })
