@@ -228,7 +228,7 @@ var Aria2 = (function (_isGM, _arrFn, _merge, _format, _isFunction) {
 	return AriaBase;
 })
 // const 变量
-('undefined' != typeof GM_xmlhttpRequest, [
+('undefined' == typeof GM_xmlhttpRequest, [
 	"addUri", "addTorrent", "addMetalink", "remove", "forceRemove",
 	"pause", "pauseAll", "forcePause", "forcePauseAll", "unpause",
 	"unpauseAll", "tellStatus", "getUris", "getFiles", "getPeers",
