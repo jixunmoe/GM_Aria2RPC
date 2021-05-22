@@ -1,3 +1,10 @@
+// ==UserScript==
+// @name         Aria2 RPC
+// @namespace    moe.jixun
+// @version      0.1
+// @license      MIT
+// ==/UserScript==
+
 // Public Class Aria2 ( options )
 
 var Aria2 = (function (_isGM, _arrFn, _merge, _format, _isFunction) {
